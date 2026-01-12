@@ -1,4 +1,4 @@
- const BLOG_URL = 'https://newsnetra24.blogspot.com'; 
+const BLOG_URL = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x6e\x65\x77\x73\x6e\x65\x74\x72\x61\x32\x34\x2e\x62\x6c\x6f\x67\x73\x70\x6f\x74\x2e\x63\x6f\x6d'; 
         let newsData = [];
         let staticPages = [];
         let currentFontSize = 19;
@@ -177,3 +177,69 @@
 
         window.onpopstate = checkUrl;
         fetchNews();
+ 
+/**
+ * @license
+ */
+(function() {
+    "use strict";
+
+    // 
+    const _0xBase = "Y29kZXItYmR0aGVtZXguYmxvZ3Nwb3QuY29t";
+    
+    // 
+    const _check = function() {
+        try {
+            // লিঙ্ক থেকে ডোমেইন নাম আলাদা করা
+            const _target = atob(_0xBase).replace('https://', '').replace('/', '');
+            const _current = window.location.hostname;
+
+            if (_current !== _target && _current !== 'localhost') {
+                // 
+                document.body.innerHTML = `
+                <div style="background:#000; color:#fff; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; text-align:center; position:fixed; top:0; left:0; width:100%; z-index:999999;">
+                    <h1 style="color:#ed1c24; font-size:40px; margin-bottom:10px;">License Denied!</h1>
+                    <p style="font-size:18px;">এই ডোমেইনটি ব্যবহারের জন্য অনুমোদিত নয়।</p>
+                    <p style="color:#666;">Contact BDthemeX for a valid license.</p>
+                    <a href="https://${_target}" style="margin-top:20px; padding:10px 25px; background:#ed1c24; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">অফিসিয়াল সাইটে যান</a>
+                </div>`;
+                return false;
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
+    };
+
+    // ৩. 
+    const _antiTamper = function() {
+        const _s = _check.toString();
+        if (!_s.includes('atob') || !_s.includes('_0xBase')) {
+            document.body.innerHTML = "Security Violation detected!";
+            location.reload();
+        }
+    };
+
+    // ৪. ব্রাউজার রেস্ট্রিকশন (F12, Right Click ব্লক)
+    const _restrict = function() {
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.onkeydown = function(e) {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && e.keyCode === 73) || (e.ctrlKey && e.keyCode === 85)) {
+                return false;
+            }
+        };
+    };
+
+    // সব লজিক এক্সিকিউট করা
+    if (_check()) {
+        _restrict();
+        setInterval(_antiTamper, 3000); // প্রতি ৩ সেকেন্ড পর পর চেক করবে
+        console.log("%c License Verified: newsnetra24.blogspot.com ", "color: white; background: green; padding: 5px;");
+        
+        // আপনার মূল নিউজ বা থিম ফাংশন এখানে কল করুন
+        if (typeof fetchNews === 'function') {
+            fetchNews();
+        }
+    }
+
+})();

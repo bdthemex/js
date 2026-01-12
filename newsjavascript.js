@@ -1,105 +1,179 @@
-﻿/* * Protected Script for newsnetra24.blogspot.com
- * Unauthorized copying or use is strictly prohibited.
- */
-(function() {
-    const authorized = 'newsnetra24.blogspot.com';
-    if (window.location.hostname !== authorized && window.location.hostname !== 'localhost') {
-        alert('Unauthorized Domain! Access Denied.');
-        window.location.href = 'https://' + authorized;
-        return;
-    }
+ const BLOG_URL = 'https://newsnetra24.blogspot.com'; 
+        let newsData = [];
+        let staticPages = [];
+        let currentFontSize = 19;
+        let activePost = null;
 
-    // Obfuscated Core Logic
-    const _0x5a12 = ["\x68\x74\x74\x70\x73\x3A\x2F\x2F\x6E\x65\x77\x73\x6E\x65\x74\x72\x61\x32\x34\x2E\x62\x6C\x6F\x67\x73\x70\x6F\x74\x2E\x63\x6F\x6D", "\x6A\x73\x6F\x6E\x2D\x69\x6E\x2D\x73\x63\x72\x69\x70\x74"];
-    window.BLOG_URL = _0x5a12[0];
-    window.newsData = [];
+        function fetchNews() {
+            const script = document.createElement('script');
+            script.src = `${BLOG_URL}/feeds/posts/default?alt=json-in-script&callback=processData&max-results=150`;
+            document.body.appendChild(script);
+        }
 
-    window.fetchNews = function() {
-        const s = document.createElement('script');
-        s.src = `${BLOG_URL}/feeds/posts/default?alt=json-in-script&callback=processData&max-results=150`;
-        document.body.appendChild(s);
-    };
+        function fetchPages() {
+            const script = document.createElement('script');
+            script.src = `${BLOG_URL}/feeds/pages/default?alt=json-in-script&callback=processPages`;
+            document.body.appendChild(script);
+        }
 
-    window.processData = function(data) {
-        if (!data.feed.entry) return;
-        newsData = data.feed.entry.map(e => {
-            let img = "https://via.placeholder.com/600x400";
-            if (e.media$thumbnail) img = e.media$thumbnail.url.replace('/s72-c/', '/s1600/');
-            const link = e.link.find(l => l.rel === 'alternate').href;
-            return {
-                slug: link.split('/').pop().replace('.html', ''),
-                title: e.title.$t,
-                category: e.category ? e.category[0].term : "সাধারণ",
-                image: img,
-                content: e.content.$t,
-                author: e.author[0].name.$t,
-                date: new Date(e.published.$t).toLocaleDateString('bn-BD', { day:'numeric', month:'long', year:'numeric' }),
-                link: link
-            };
-        });
-        renderNavs(); renderHome(); setFullDate(); checkUrl();
-    };
+        function processData(data) {
+            if (!data.feed.entry) return;
+            newsData = data.feed.entry.map((entry) => {
+                let img = "https://via.placeholder.com/600x400";
+                if (entry.media$thumbnail) img = entry.media$thumbnail.url.replace('/s72-c/', '/s1600/');
+                const postLink = entry.link.find(l => l.rel === 'alternate').href;
+                const slug = postLink.split('/').pop().replace('.html', '');
+                return {
+                    slug: slug, title: entry.title.$t, category: entry.category ? entry.category[0].term : "সাধারণ",
+                    image: img, summary: entry.content.$t.replace(/<[^>]*>?/gm, '').substring(0, 150) + "...",
+                    content: entry.content.$t, author: entry.author[0].name.$t,
+                    date: new Date(entry.published.$t).toLocaleDateString('bn-BD', { day:'numeric', month:'long', year:'numeric' }),
+                    link: postLink
+                };
+            });
+            renderNavs(); renderHome(); setFullDate(); checkUrl(); fetchPages();
+        }
 
-    // UI Rendering Functions
-    window.showPage = (p) => { 
-        document.querySelectorAll('#home-view, #articlePage, #categoryPage, #staticPage, #searchPage').forEach(x => x.style.display = 'none'); 
-        document.getElementById(p).style.display = 'block'; 
-    };
+        function processPages(data) {
+            if (!data.feed.entry) return;
+            staticPages = data.feed.entry.map(entry => ({
+                title: entry.title.$t, content: entry.content.$t,
+                slug: entry.link.find(l => l.rel === 'alternate').href.split('/').pop().replace('.html', '')
+            }));
+            renderPagesList();
+        }
 
-    window.openArticle = (slug) => {
-        const post = newsData.find(n => n.slug == slug);
-        if(!post) return;
-        window.history.pushState({slug: slug}, '', '?post=' + slug);
-        showPage('articlePage');
-        window.scrollTo(0,0);
-        document.getElementById('article-content').innerHTML = `
-            <h1 class="text-4xl font-bold mb-4">${post.title}</h1>
-            <div class="flex justify-between items-center border-y py-3 mb-6">
-                <div class="text-sm font-bold text-gray-500">${post.date} | ${post.author}</div>
-                <div class="flex gap-2">
-                    <button onclick="shareSocial('facebook')" class="w-8 h-8 rounded-full bg-[#1877F2] text-white"><i class="fa-brands fa-facebook-f"></i></button>
-                    <button onclick="shareSocial('whatsapp')" class="w-8 h-8 rounded-full bg-[#25D366] text-white"><i class="fa-brands fa-whatsapp"></i></button>
-                    <button onclick="shareSocial('messenger')" class="w-8 h-8 rounded-full bg-[#0084FF] text-white"><i class="fa-brands fa-facebook-messenger"></i></button>
-                    <button onclick="shareSocial('copy')" class="w-8 h-8 rounded-full bg-gray-500 text-white"><i class="fa-solid fa-link"></i></button>
+        function openArticle(slug) {
+            const post = newsData.find(n => n.slug == slug);
+            if(!post) return;
+            activePost = post;
+            window.history.pushState({slug: slug}, '', '?post=' + slug);
+            showPage('articlePage');
+            window.scrollTo(0,0);
+
+            let cleanContent = post.content;
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = post.content;
+            const firstImg = tempDiv.querySelector('img');
+            if (firstImg) { firstImg.remove(); cleanContent = tempDiv.innerHTML; }
+
+            document.getElementById('article-content').innerHTML = `
+                <nav class="text-sm text-gray-500 mb-2 font-bold">প্রচ্ছদ / ${post.category}</nav>
+                <h1 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">${post.title}</h1>
+                
+                <div class="flex flex-wrap items-center justify-between gap-4 border-y py-3 mb-6">
+                    <div class="text-gray-500 text-sm">
+                        <span><i class="fa-regular fa-clock mr-1"></i> ${post.date}</span>
+                        <span class="ml-4"><i class="fa-regular fa-user mr-1"></i> ${post.author}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="shareSocial('facebook')" class="w-8 h-8 rounded-full bg-[#1877F2] text-white text-xs"><i class="fa-brands fa-facebook-f"></i></button>
+                        <button onclick="shareSocial('whatsapp')" class="w-8 h-8 rounded-full bg-[#25D366] text-white text-xs"><i class="fa-brands fa-whatsapp"></i></button>
+                        <button onclick="shareSocial('twitter')" class="w-8 h-8 rounded-full bg-[#1DA1F2] text-white text-xs"><i class="fa-brands fa-twitter"></i></button>
+                        <button onclick="shareSocial('messenger')" class="w-8 h-8 rounded-full bg-[#0084FF] text-white text-xs"><i class="fa-brands fa-facebook-messenger"></i></button>
+                        <button onclick="shareSocial('copy')" class="w-8 h-8 rounded-full bg-gray-500 text-white text-xs"><i class="fa-solid fa-link"></i></button>
+                    </div>
                 </div>
-            </div>
-            <img src="${post.image}" class="w-full rounded-lg mb-6 shadow">
-            <div id="article-body" class="text-lg leading-relaxed">${post.content}</div>
-        `;
-        renderSidebar();
-    };
 
-    window.renderHome = () => {
-        showPage('home-view');
-        if(!newsData.length) return;
-        document.getElementById('hero-left-main').innerHTML = `
-            <div class="cursor-pointer group" onclick="openArticle('${newsData[0].slug}')">
-                <img src="${newsData[0].image}" class="w-full h-[400px] object-cover rounded">
-                <h2 class="text-3xl font-bold mt-4 group-hover:text-amRed">${newsData[0].title}</h2>
-            </div>`;
-        // ... (বাকি রেন্ডারিং লজিক আগের মতোই থাকবে)
-    };
+                <img src="${post.image}" class="w-full rounded-lg mb-6 shadow-md">
+                <div id="article-body" style="font-size:${currentFontSize}px">${cleanContent}</div>
+            `;
+            renderSidebarAndRelated(post);
+        }
 
-    window.shareSocial = (type) => {
-        const url = window.location.href;
-        if(type==='facebook') window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`);
-        else if(type==='whatsapp') window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(url)}`);
-        else if(type==='copy') { navigator.clipboard.writeText(url); alert("Link Copied!"); }
-    };
+        function renderHome() {
+            showPage('home-view');
+            if(newsData.length === 0) return;
+            document.getElementById('hero-left-main').innerHTML = `<div class="cursor-pointer group" onclick="openArticle('${newsData[0].slug}')"><img src="${newsData[0].image}" class="w-full h-[400px] object-cover rounded shadow"><h2 class="text-3xl font-bold mt-4 group-hover:text-amRed">${newsData[0].title}</h2><p class="text-gray-600 mt-2">${newsData[0].summary}</p></div>`;
+            document.getElementById('hero-right-list').innerHTML = `<div class="section-header"><h2>শীর্ষ সংবাদ</h2></div>` + newsData.slice(1, 6).map(i => `<div class="flex gap-3 border-b pb-2 mb-2 cursor-pointer group" onclick="openArticle('${i.slug}')"><img src="${i.image}" class="w-20 h-14 object-cover rounded"><h4 class="text-sm font-bold group-hover:text-amRed leading-tight">${i.title}</h4></div>`).join('');
+            const cats = [...new Set(newsData.map(i => i.category))].slice(0, 6);
+            document.getElementById('category-blocks').innerHTML = cats.map(cat => {
+                const items = newsData.filter(n => n.category === cat).slice(0, 4);
+                return `<section class="mb-12"><div class="section-header"><h2 onclick="filterCategory('${cat}')">${cat}</h2></div><div class="grid grid-cols-2 md:grid-cols-4 gap-6">${items.map(i => `<div class="cursor-pointer group" onclick="openArticle('${i.slug}')"><img src="${i.image}" class="w-full h-32 md:h-40 object-cover rounded mb-2"><h4 class="font-bold text-sm group-hover:text-amRed">${i.title}</h4></div>`).join('')}</div></section>`;
+            }).join('');
+        }
 
-    window.setFullDate = () => {
-        const d = new Date().toLocaleDateString('bn-BD', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-        document.getElementById('header-date').innerText = d + " | ২৭ পৌষ ১৪৩২";
-    };
+        function executeSearch() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            if(!query) return;
+            toggleSearch();
+            showPage('searchPage');
+            document.getElementById('search-title-view').innerText = `ফলাফল: ${query}`;
+            const results = newsData.filter(n => n.title.toLowerCase().includes(query) || n.content.toLowerCase().includes(query));
+            document.getElementById('search-grid').innerHTML = results.length ? results.map(i => `<div class="cursor-pointer group" onclick="openArticle('${i.slug}')"><img src="${i.image}" class="w-full h-40 object-cover rounded mb-2"><h4 class="font-bold text-sm group-hover:text-amRed">${i.title}</h4></div>`).join('') : "<p class='col-span-full py-10 text-center text-gray-500'>কোন সংবাদ পাওয়া যায়নি।</p>";
+        }
 
-    window.goHome = () => { window.history.pushState({}, '', window.location.pathname); renderHome(); };
-    window.toggleDrawer = () => { document.getElementById('drawer').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); };
-    window.closeAll = () => { document.getElementById('drawer').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); };
+        function shareSocial(type) {
+            const url = window.location.href;
+            const text = activePost ? activePost.title : "নিউজ নেত্র ২৪";
+            if(type === 'facebook') window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+            else if(type === 'whatsapp') window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text + " " + url)}`, '_blank');
+            else if(type === 'twitter') window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
+            else if(type === 'messenger') window.open(`fb-messenger://share?link=${encodeURIComponent(url)}`, '_blank');
+            else if(type === 'copy') { navigator.clipboard.writeText(url); alert("লিংক কপি করা হয়েছে!"); }
+        }
 
-    window.checkUrl = () => {
-        const p = new URLSearchParams(window.location.search);
-        if(p.get('post')) openArticle(p.get('post')); else renderHome();
-    };
+        function setFullDate() { 
+            const d = new Date().toLocaleDateString('bn-BD', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+            document.getElementById('header-date').innerText = d + " | ২৭ পৌষ ১৪৩২"; 
+        }
 
-    fetchNews();
-})();
+        function renderNavs() {
+            const hNav = document.getElementById('header-nav'), dNav = document.getElementById('drawer-links'), fCats = document.getElementById('footer-cats');
+            const cats = [...new Set(newsData.map(i => i.category))];
+            hNav.innerHTML = ''; dNav.innerHTML = ''; fCats.innerHTML = '';
+            cats.forEach(cat => {
+                const btn = `<button onclick="filterCategory('${cat}')" class="hover:text-amRed transition">${cat}</button>`;
+                hNav.innerHTML += btn;
+                dNav.innerHTML += `<button onclick="filterCategory('${cat}'); toggleDrawer()" class="text-left border-b pb-2 font-bold">${cat}</button>`;
+                fCats.innerHTML += `<li><button onclick="filterCategory('${cat}')">${cat}</button></li>`;
+            });
+        }
+
+        function renderPagesList() {
+            const fPages = document.getElementById('footer-pages'), dPages = document.getElementById('drawer-pages');
+            fPages.innerHTML = '<li><button onclick="goHome()">প্রচ্ছদ</button></li>';
+            dPages.innerHTML = '';
+            staticPages.forEach(p => {
+                fPages.innerHTML += `<li><button onclick="openStaticPage('${p.slug}')">${p.title}</button></li>`;
+                dPages.innerHTML += `<button onclick="openStaticPage('${p.slug}'); toggleDrawer()" class="text-left">${p.title}</button>`;
+            });
+        }
+
+        function showPage(p) { document.querySelectorAll('#home-view, #articlePage, #categoryPage, #staticPage, #searchPage').forEach(pg => pg.style.display = 'none'); document.getElementById(p).style.display = 'block'; }
+        function goHome() { window.history.pushState({}, '', window.location.pathname); renderHome(); }
+        function toggleDrawer() { document.getElementById('drawer').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); }
+        function toggleSearch() { document.getElementById('search-box').classList.toggle('hidden'); }
+        function openShareModal() { document.getElementById('modal-share').classList.remove('hidden'); document.getElementById('modal-share').classList.add('flex'); }
+        function closeAll() { document.getElementById('drawer').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); document.getElementById('modal-share').classList.add('hidden'); }
+        function changeFontSize(n) { currentFontSize += n; document.getElementById('article-body').style.fontSize = currentFontSize + 'px'; }
+        
+        function renderSidebarAndRelated(post) {
+            const related = newsData.filter(n => n.category === post.category && n.slug !== post.slug).slice(0, 4);
+            document.getElementById('related-news').innerHTML = `<div class="section-header"><h2>আরও পড়ুন</h2></div><div class="grid grid-cols-2 gap-6">${related.map(i => `<div class="cursor-pointer group" onclick="openArticle('${i.slug}')"><img src="${i.image}" class="w-full h-32 object-cover rounded mb-2"><h4 class="font-bold text-sm group-hover:text-amRed">${i.title}</h4></div>`).join('')}</div>`;
+            document.getElementById('article-sidebar').innerHTML = `<div class="section-header"><h2>সর্বশেষ</h2></div>` + newsData.slice(0, 10).map(i => `<div class="flex gap-3 border-b pb-2 mb-3 cursor-pointer group" onclick="openArticle('${i.slug}')"><img src="${i.image}" class="w-16 h-12 object-cover rounded"><h4 class="text-sm font-bold group-hover:text-amRed leading-tight">${i.title}</h4></div>`).join('');
+            if(window.FB) { document.getElementById('fb-comment-box').setAttribute('data-href', post.link); FB.XFBML.parse(); }
+        }
+
+        function filterCategory(cat) { 
+            window.history.pushState({cat: cat}, '', '?category=' + encodeURIComponent(cat));
+            showPage('categoryPage'); document.getElementById('cat-title-view').innerText = cat;
+            document.getElementById('cat-grid').innerHTML = newsData.filter(i => i.category === cat).map(i => `<div class="cursor-pointer group" onclick="openArticle('${i.slug}')"><img src="${i.image}" class="w-full h-40 object-cover rounded mb-2"><h4 class="font-bold text-sm group-hover:text-amRed">${i.title}</h4></div>`).join('');
+        }
+
+        function openStaticPage(slug) {
+            const page = staticPages.find(p => p.slug == slug);
+            if(!page) return;
+            showPage('staticPage');
+            document.getElementById('static-content').innerHTML = `<h1 class="text-4xl font-bold mb-8 border-b pb-4">${page.title}</h1><div class="prose max-w-none text-lg">${page.content}</div>`;
+        }
+
+        function checkUrl() {
+            const p = new URLSearchParams(window.location.search);
+            if(p.get('post')) openArticle(p.get('post')); 
+            else if(p.get('category')) filterCategory(p.get('category')); 
+            else goHome();
+        }
+
+        window.onpopstate = checkUrl;
+        fetchNews();

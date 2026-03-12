@@ -1,7 +1,7 @@
 /* Domain Protection Script */
 (function() {
     // 
-    var allowedDomain = "https://service-bangla.blogspot.com";
+    var allowedDomain = "www.service-bangla.blogspot.com";
     
     // 
     if (window.location.hostname !== allowedDomain) {

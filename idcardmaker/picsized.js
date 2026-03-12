@@ -8,6 +8,6 @@
     // ে
     if (hostname.indexOf(domainName) === -1) {
         // 
-        window.location.href = "https://www.bdwapmaster.blogspot.com";
+        window.location.href = "bdwapmaster.blogspot.com";
     }
 })();

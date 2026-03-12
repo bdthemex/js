@@ -1,7 +1,7 @@
 /* Domain Protection Script */
 (function() {
     // আপনার অনুমোদিত ডোমেইন
-    var allowedDomain = "www.bdwapmaster.blogspot.com";
+    var allowedDomain = "www.service-bangla.blogspot.com";
     
     // বর্তমান সাইটের ডোমেইন চেক
     if (window.location.hostname !== allowedDomain) {
